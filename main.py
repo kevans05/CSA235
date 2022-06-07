@@ -28,7 +28,7 @@ header_list = ["Record", "Date", "Time", "ms", "V1ac Min (V)", "V1ac Avg (V)", "
 
 bins_list = np.arange(105, 128, 0.25)
 
-df = pd.read_csv('data/.csv', encoding="ISO-8859-1", skiprows=5, names=header_list, low_memory=False)
+df = pd.read_csv('data/GatessOfHyPark.csv', encoding="ISO-8859-1", skiprows=5, names=header_list, low_memory=False)
 
 df["Datetime"] = pd.to_datetime(df["Date"] + " " + df["Time"])
 
@@ -36,16 +36,50 @@ df2 = df.resample('W', on='Datetime')
 
 
 for _, g in df2:
-    x = plt.hist(g['V1ac Avg (V)'], density=True, histtype='bar', facecolor='b', alpha=0.5, bins=bins_list, label='Phase A')
-    plt.hist(g['V2ac Avg (V)'], density=True, histtype='bar', facecolor='y', alpha=0.5, bins=bins_list, label='Phase B')
-    plt.title('Voltage Averages for the week of\n' + str(_.date()) + " & " + str((_ + datetime.timedelta(days=7)).date()))
+    # x = plt.hist(g['V1ac Avg (V)'], density=True, histtype='bar', facecolor='b', alpha=0.5, bins=bins_list, label='Phase A')
+    # plt.hist(g['V2ac Avg (V)'], density=True, histtype='bar', facecolor='y', alpha=0.5, bins=bins_list, label='Phase B')
+    # plt.title('Voltage Averages for the week of\n' + str(_.date()) + " & " + str((_ + datetime.timedelta(days=7)).date()))
+    # plt.axvline(x=110, color='yellow')
+    # plt.axvline(x=125, color='yellow')
+    # plt.axvline(x=106, color='red')
+    # plt.axvline(x=127, color='red')
+    # plt.xlabel("Voltage Bins")
+    # plt.ylabel("Probability")
+    # plt.legend()
+    Abs_frecuency, intervals = np.histogram(g['V1ac Avg (V)'], bins = bins_list)
+    # Create dataframe
+    df_x = pd.DataFrame(index=np.linspace(1, 91, 91), columns=['start', 'end', 'V1ac', 'Frec_abs'])
+    # Assign the intervals
+    df_x['start'] = intervals[:-1]
+    df_x['end'] = intervals[1:]
+    # Calculate class marks
+    df_x['V1ac'] = (df_x['start'] + df_x['end']) / 2
+    # Assing Absolute frecuency
+    df_x['Frec_abs'] = Abs_frecuency
+    with pd.option_context('display.max_rows', None, 'display.max_columns', None):
+        print(df_x)
+
+
+    plt.hist(g['V1ac Avg (V)'], bins=bins_list, alpha=0.5, color='blue', ec='black', label='Phase A')
+    plt.hist(g['V2ac Avg (V)'], bins=bins_list, alpha=0.5, color='green', ec='black', label='Phase B')
+    # Labels
+    plt.ylabel('Absolute Frequency', fontsize=14)
+    plt.xlabel('Voltage (V)', fontsize=14)
+    plt.xticks(fontsize=14)
+    plt.yticks(fontsize=14)
+    # Add Title
+    plt.title('Voltage Averages for the week of\n' + str(_.date()) + " & " + str((_ + datetime.timedelta(days=7)).date()), fontsize=16);
+
     plt.axvline(x=110, color='yellow')
     plt.axvline(x=125, color='yellow')
     plt.axvline(x=106, color='red')
     plt.axvline(x=127, color='red')
-    plt.xlabel("Voltage Bins")
-    plt.ylabel("Probability")
+
+    plt.table(cellText=df_x['Frec_abs'],
+              rowLabels=df_x['V1ac'],
+              loc='bottom')
+
     plt.legend()
+
     plt.show()
-    with pd.option_context('display.max_rows', None, 'display.max_columns', None):  # more options can be specified also
-        print(g.groupby(pd.cut(g['V1ac Avg (V)'], bins=bins_list)).size())
+
