@@ -34,6 +34,15 @@ df["Datetime"] = pd.to_datetime(df["Date"] + " " + df["Time"])
 df2 = df.resample('W', on='Datetime')
 plt.hist(df['V1ac Avg (V)'], density=True, histtype='bar', facecolor='b', alpha=0.5, bins = bins_list)
 plt.show()
+
+plt.hist(df['V2ac Avg (V)'], density=True, histtype='bar', facecolor='b', alpha=0.5, bins = bins_list)
+plt.show()
+
+for _, g  in df2:
+    plt.hist(g['V1ac Avg (V)'], density=True, histtype='bar', facecolor='b', alpha=0.5, bins=bins_list)
+    plt.show()
+    plt.hist(g['V2ac Avg (V)'], density=True, histtype='bar', facecolor='b', alpha=0.5, bins=bins_list)
+    plt.show()
 # print(tabulate(df, headers='keys', tablefmt='psql'))
 #print(tabulate(df2, headers='keys', tablefmt='psql'))
 # with pd.option_context('display.max_rows', None, 'display.max_columns', None):  # more options can be specified also
