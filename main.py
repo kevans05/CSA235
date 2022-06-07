@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 from tabulate import tabulate
 import matplotlib.pyplot as plt
+import datetime
 
 header_list = ["Record", "Date", "Time", "ms", "V1ac Min (V)", "V1ac Avg (V)", "V1ac Max (V)", "V2ac Min (V)",
                "V2ac Avg (V)", "V2ac Max (V)", "V1dc Min (V)", "V1dc Avg (V)", "V1dc Max (V)", "V2dc Min (V)",
@@ -25,23 +26,21 @@ header_list = ["Record", "Date", "Time", "ms", "V1ac Min (V)", "V1ac Avg (V)", "
                "I3-H9 (A)", "I3-H9 ( Degrees)", "I4-H3 [m] (A)", "I4-H3 [m] ( Degrees)", "I4-H5 [m] (A)",
                "I4-H5 [m] ( Degrees)", "I4-H9 [m] (A)", "I4-H9 [m] ( Degrees)"]
 
-bins_list = [106, 108,110,112,114,116,118,120,122,124,126]
+bins_list = np.arange(105, 128, 0.25)
 
-df = pd.read_csv('data/', encoding="ISO-8859-1", skiprows=5, names=header_list, low_memory=False)
+df = pd.read_csv('data/.csv', encoding="ISO-8859-1", skiprows=5, names=header_list, low_memory=False)
 
 df["Datetime"] = pd.to_datetime(df["Date"] + " " + df["Time"])
 
 df2 = df.resample('W', on='Datetime')
-plt.hist(df['V1ac Avg (V)'], density=True, histtype='bar', facecolor='b', alpha=0.5, bins = bins_list)
-plt.show()
 
-plt.hist(df['V2ac Avg (V)'], density=True, histtype='bar', facecolor='b', alpha=0.5, bins = bins_list)
-plt.show()
 
 for _, g  in df2:
     plt.hist(g['V1ac Avg (V)'], density=True, histtype='bar', facecolor='b', alpha=0.5, bins=bins_list)
+    plt.title('Voltage 1 - Average for the week of ' + str(_.date()) + " & " + str((_ + datetime.timedelta(days=7)).date()))
     plt.show()
     plt.hist(g['V2ac Avg (V)'], density=True, histtype='bar', facecolor='b', alpha=0.5, bins=bins_list)
+    plt.title('Voltage 2 - Average for the week of ' + str(_.date()) + " & " + str((_ + datetime.timedelta(days=7)).date()))
     plt.show()
 # print(tabulate(df, headers='keys', tablefmt='psql'))
 #print(tabulate(df2, headers='keys', tablefmt='psql'))
