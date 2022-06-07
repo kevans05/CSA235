@@ -35,14 +35,17 @@ df["Datetime"] = pd.to_datetime(df["Date"] + " " + df["Time"])
 df2 = df.resample('W', on='Datetime')
 
 
-for _, g  in df2:
-    plt.hist(g['V1ac Avg (V)'], density=True, histtype='bar', facecolor='b', alpha=0.5, bins=bins_list)
-    plt.title('Voltage 1 - Average for the week of ' + str(_.date()) + " & " + str((_ + datetime.timedelta(days=7)).date()))
+for _, g in df2:
+    x = plt.hist(g['V1ac Avg (V)'], density=True, histtype='bar', facecolor='b', alpha=0.5, bins=bins_list, label='Phase A')
+    plt.hist(g['V2ac Avg (V)'], density=True, histtype='bar', facecolor='y', alpha=0.5, bins=bins_list, label='Phase B')
+    plt.title('Voltage Averages for the week of\n' + str(_.date()) + " & " + str((_ + datetime.timedelta(days=7)).date()))
+    plt.axvline(x=110, color='yellow')
+    plt.axvline(x=125, color='yellow')
+    plt.axvline(x=106, color='red')
+    plt.axvline(x=127, color='red')
+    plt.xlabel("Voltage Bins")
+    plt.ylabel("Probability")
+    plt.legend()
     plt.show()
-    plt.hist(g['V2ac Avg (V)'], density=True, histtype='bar', facecolor='b', alpha=0.5, bins=bins_list)
-    plt.title('Voltage 2 - Average for the week of ' + str(_.date()) + " & " + str((_ + datetime.timedelta(days=7)).date()))
-    plt.show()
-# print(tabulate(df, headers='keys', tablefmt='psql'))
-#print(tabulate(df2, headers='keys', tablefmt='psql'))
-# with pd.option_context('display.max_rows', None, 'display.max_columns', None):  # more options can be specified also
-#     print(tabulate(df['V1ac Avg (V)'], headers='keys', tablefmt='psql'))
+    with pd.option_context('display.max_rows', None, 'display.max_columns', None):  # more options can be specified also
+        print(g.groupby(pd.cut(g['V1ac Avg (V)'], bins=bins_list)).size())
