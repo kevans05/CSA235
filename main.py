@@ -28,7 +28,7 @@ header_list = ["Record", "Date", "Time", "ms", "V1ac Min (V)", "V1ac Avg (V)", "
 
 bins_list = np.arange(105, 128, 0.25)
 
-df = pd.read_csv('data/GatessOfHyPark.csv', encoding="ISO-8859-1", skiprows=5, names=header_list, low_memory=False)
+df = pd.read_csv('data/.csv', encoding="ISO-8859-1", skiprows=5, names=header_list, low_memory=False)
 
 df["Datetime"] = pd.to_datetime(df["Date"] + " " + df["Time"])
 
@@ -48,7 +48,7 @@ for _, g in df2:
     # plt.legend()
     Abs_frecuency, intervals = np.histogram(g['V1ac Avg (V)'], bins = bins_list)
     # Create dataframe
-    df_x = pd.DataFrame(index=np.linspace(1, 91, 91), columns=['start', 'end', 'V1ac', 'Frec_abs'])
+    df_x = pd.DataFrame(index=np.linspace(1, 91, 91), columns=['start', 'end', 'V1ac', 'Frec_abs', 'Frec_perc'])
     # Assign the intervals
     df_x['start'] = intervals[:-1]
     df_x['end'] = intervals[1:]
@@ -56,8 +56,16 @@ for _, g in df2:
     df_x['V1ac'] = (df_x['start'] + df_x['end']) / 2
     # Assing Absolute frecuency
     df_x['Frec_abs'] = Abs_frecuency
+
+    df_x['Frec_perc'] = df_x['Frec_abs'].div(df_x['Frec_abs'].sum()).mul(100).round(2)
+
+
+
+
     with pd.option_context('display.max_rows', None, 'display.max_columns', None):
         print(df_x)
+
+
 
 
     plt.hist(g['V1ac Avg (V)'], bins=bins_list, alpha=0.5, color='blue', ec='black', label='Phase A')
@@ -75,10 +83,8 @@ for _, g in df2:
     plt.axvline(x=106, color='red')
     plt.axvline(x=127, color='red')
 
-    plt.table(cellText=df_x['Frec_abs'],
-              rowLabels=df_x['V1ac'],
-              loc='bottom')
 
+    # plt.table(cellText=df_x)
     plt.legend()
 
     plt.show()
