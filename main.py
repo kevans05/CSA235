@@ -5,7 +5,9 @@ import matplotlib.pyplot as plt
 import datetime
 import seaborn as sns
 import matplotlib.pyplot as plt
+from matplotlib.ticker import PercentFormatter
 plt.style.use('seaborn')
+
 
 header_list = ["Record", "Date", "Time", "ms", "V1ac Min (V)", "V1ac Avg (V)", "V1ac Max (V)", "V2ac Min (V)",
                "V2ac Avg (V)", "V2ac Max (V)", "V1dc Min (V)", "V1dc Avg (V)", "V1dc Max (V)", "V2dc Min (V)",
@@ -29,9 +31,9 @@ header_list = ["Record", "Date", "Time", "ms", "V1ac Min (V)", "V1ac Avg (V)", "
                "I3-H9 (A)", "I3-H9 ( Degrees)", "I4-H3 [m] (A)", "I4-H3 [m] ( Degrees)", "I4-H5 [m] (A)",
                "I4-H5 [m] ( Degrees)", "I4-H9 [m] (A)", "I4-H9 [m] ( Degrees)"]
 
-bins_list = np.arange(105, 128, 1)
+bins_list = np.arange(105, 128, 0.25)
 
-df = pd.read_csv('data/.csv', encoding="ISO-8859-1", skiprows=5, names=header_list, low_memory=False)
+df = pd.read_csv('data/.CSV', encoding="ISO-8859-1", skiprows=5, names=header_list, low_memory=False)
 
 df["Datetime"] = pd.to_datetime(df["Date"] + " " + df["Time"])
 
@@ -39,61 +41,84 @@ df2 = df.resample('W', on='Datetime')
 
 
 for _, g in df2:
-    Abs_Frequency_V1, intervals = np.histogram(g['V1ac Avg (V)'], bins=bins_list)
-    Abs_Frequency_V2, intervals = np.histogram(g['V2ac Avg (V)'], bins=bins_list)
-    # Create dataframe
-    df_x = pd.DataFrame(index=np.linspace(1, 91, len(bins_list)-1), columns=['start', 'end', 'Frec_abs_V1', 'Frec_perc_V1',
-                                                               'Frec_abs_V2', 'Frec_perc_V2'])
+    count_normal_a = g['V1ac Avg (V)'].between(left=110, right=125).sum()
+    count_extreme_a = g['V1ac Avg (V)'].between(left=106, right=127).sum()
+    count_total_a = g['V2ac Avg (V)'].size
+
+    count_normal_b = g['V2ac Avg (V)'].between(left=110, right=125).sum()
+    count_extreme_b = g['V2ac Avg (V)'].between(left=106, right=127).sum()
+    count_total_b = g['V2ac Avg (V)'].size
+
+    normal_percent_a = round((count_normal_a/count_total_a)*100, 2)
+    normal_pass_fail_a = 'Pass' if normal_percent_a > 95 else 'Fail'
+    extreme_percent_a = round((count_extreme_a/count_total_a)*100, 2)
+    extreme_pass_fail_a = 'Pass' if extreme_percent_a > 99 else 'Fail'
+
+    normal_percent_b = round((count_normal_b/count_total_b)*100, 2)
+    normal_pass_fail_b = 'Pass' if normal_percent_b > 95 else 'Fail'
+    extreme_percent_b = round((count_extreme_b/count_total_b)*100, 2)
+    extreme_pass_fail_b = 'Pass' if extreme_percent_b > 99 else 'Fail'
+
+    title = 'Voltage Averages for the week of\n' + str(_.date()) + " & " + str((_ + datetime.timedelta(days=7)).date())
+    stat_table = "Phase A\n" \
+                 "   Percentage in Normal Operating Conditions: {normal_percent_a}%\n"\
+                 "   Pass\Fail (95% of the time):             : {normal_pass_fail_a}\n"\
+                 "   Percentage in Extreme Operating Conditions: {extreme_percent_a}%\n"\
+                 "   Pass\Fail (99% of the time):             : {extreme_pass_fail_a}\n"\
+                 "---------------------------------------------------------------\n\n\n" \
+                 "Phase B\n" \
+                 "   Percentage in Normal Operating Conditions: {normal_percent_b}%\n" \
+                 "   Pass\Fail (95% of the time):             : {normal_pass_fail_b}\n" \
+                 "   Percentage in Extreme Operating Conditions: {extreme_percent_b}%\n" \
+                 "   Pass\Fail (99% of the time):             : {normal_pass_fail_b}\n".\
+        format(normal_percent_a=normal_percent_a, normal_pass_fail_a=normal_pass_fail_a,
+               extreme_percent_a=extreme_percent_a, extreme_pass_fail_a=extreme_pass_fail_a,
+               normal_percent_b=normal_percent_b, normal_pass_fail_b=normal_pass_fail_b,
+               extreme_percent_b=extreme_percent_b, extreme_pass_fail_b=extreme_pass_fail_b)
 
 
-    #print(g['V2ac Avg (V)'].quantile(0.95))
-    # Assign the intervals
-    df_x['start'] = intervals[:-1]
-    df_x['end'] = intervals[1:]
+    fig, ax = plt.subplots(3,1)
+    fig.suptitle(title)
+    plt.subplots_adjust(left=0.1,
+                        bottom=0.1,
+                        right=0.9,
+                        top=0.9,
+                        wspace=1,
+                        hspace=0.4)
 
-    df_x = df_x.set_index("start")
-    # Assing Absolute frecuency
-    df_x['Frec_abs_V1'] = Abs_Frequency_V1
-    df_x['Frec_abs_V2'] = Abs_Frequency_V2
+    fig.set_size_inches(10.5, 10.5)
 
-    #converst it to a percentage of the total
-    df_x['Frec_perc_V1'] = df_x['Frec_abs_V1'].div(df_x['Frec_abs_V1'].sum()).mul(100).round(2)
-    df_x['Frec_perc_V2'] = df_x['Frec_abs_V2'].div(df_x['Frec_abs_V2'].sum()).mul(100).round(2)
+    n_a, bins_a, patches_a = ax.ravel()[0].hist(g['V1ac Avg (V)'], bins_list, density=1, facecolor='r',
+                                                label='Phase A')
+    n_b, bins_b, patches_b = ax.ravel()[1].hist(g['V2ac Avg (V)'], bins_list, density=1, facecolor='y',
+                                                label='Phase B')
 
-    plt.figure(figsize=(9, 25))
-    fig, axs = plt.subplots(1)
-    #generates the histogram
-    axs[0].hist(g['V1ac Avg (V)'], weights=np.ones(len(g['V1ac Avg (V)'])) / len(g['V1ac Avg (V)']) * 100, bins=bins_list, alpha=0.5, color='blue', ec='black', label='Phase A')
-    axs[0].hist(g['V2ac Avg (V)'], weights=np.ones(len(g['V2ac Avg (V)'])) / len(g['V2ac Avg (V)']) * 100, bins=bins_list, alpha=0.5, color='green', ec='black', label='Phase B')
-    # Labels
-    axs[0].set(xlabel='Percentage Frequency', ylabel='Voltage (V)')
 
-    # axs[0].ylabel('Percentage Frequency', fontsize=14)
-    # axs[0].xlabel('Voltage (V)', fontsize=14)
-    # axs[0].xticks(fontsize=14)
-    # axs[0].yticks(fontsize=14)
-    # Add Title
-    fig.suptitle('Voltage Averages for the week of\n' + str(_.date()) + " & " + str((_ + datetime.timedelta(days=7)).date()), fontsize=16);
+    ax.ravel()[0].set_title('Phase A')
+    ax.ravel()[0].set_xlabel('Voltage')
+    ax.ravel()[0].set_ylabel('Percentage')
+    ax.ravel()[0].axvline(x=110, color='g')
+    ax.ravel()[0].axvline(x=125, color='g')
+    ax.ravel()[0].axvline(x=106, color='b')
+    ax.ravel()[0].axvline(x=127, color='b')
+    ax.ravel()[0].set_ylim([0, 1])
+    ax.ravel()[0].yaxis.set_major_formatter(PercentFormatter(xmax=1))
 
-    axs[0].axvline(x=110, color='yellow')
-    axs[0].axvline(x=125, color='yellow')
-    axs[0].axvline(x=106, color='red')
-    axs[0].axvline(x=127, color='red')
+    ax.ravel()[1].set_title('Phase B')
+    ax.ravel()[1].set_xlabel('Voltage')
+    ax.ravel()[1].set_ylabel('Percentage')
+    ax.ravel()[1].axvline(x=110, color='g')
+    ax.ravel()[1].axvline(x=125, color='g')
+    ax.ravel()[1].axvline(x=106, color='b')
+    ax.ravel()[1].axvline(x=127, color='b')
+    ax.ravel()[1].set_ylim([0, 1])
+    ax.ravel()[1].yaxis.set_major_formatter(PercentFormatter(xmax=1))
 
-    # plt.table(cellText=df_x.values, colLabels=df_x.columns, loc='bottom')
-    axs[0].legend()
-    #plt.subplots_adjust(left=None, bottom=.45, right=None, top=.5, wspace=.4, hspace=None)
-    axs[0].set_axis_off()
-    axs[0].table(cellText=df_x.values, colLabels=df_x.columns,  loc='bottom')
+    ax.ravel()[2].set_axis_off()
 
+    ax.ravel()[2].text(0, 00, stat_table ,wrap=True)
 
     plt.show()
+    fig.savefig(title + '.png', dpi=300, bbox_inches='tight')
 
-    # with pd.option_context('display.max_rows', None, 'display.max_columns', None):
-    #     print(df_x)
-    #
-    #     print(df_x['Frec_perc_V1'].sum(), df_x['Frec_perc_V2'].sum())
-    #
-    #     df_z = df_x.drop([105,106,107,108,109,110,126,125])
-    #     print(df_z['Frec_perc_V1'].sum(), df_z['Frec_perc_V2'].sum())
 
