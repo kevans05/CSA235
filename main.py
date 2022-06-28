@@ -3,6 +3,9 @@ import numpy as np
 from tabulate import tabulate
 import matplotlib.pyplot as plt
 import datetime
+import seaborn as sns
+import matplotlib.pyplot as plt
+plt.style.use('seaborn')
 
 header_list = ["Record", "Date", "Time", "ms", "V1ac Min (V)", "V1ac Avg (V)", "V1ac Max (V)", "V2ac Min (V)",
                "V2ac Avg (V)", "V2ac Max (V)", "V1dc Min (V)", "V1dc Avg (V)", "V1dc Max (V)", "V2dc Min (V)",
@@ -26,7 +29,7 @@ header_list = ["Record", "Date", "Time", "ms", "V1ac Min (V)", "V1ac Avg (V)", "
                "I3-H9 (A)", "I3-H9 ( Degrees)", "I4-H3 [m] (A)", "I4-H3 [m] ( Degrees)", "I4-H5 [m] (A)",
                "I4-H5 [m] ( Degrees)", "I4-H9 [m] (A)", "I4-H9 [m] ( Degrees)"]
 
-bins_list = np.arange(105, 128, 0.25)
+bins_list = np.arange(105, 128, 1)
 
 df = pd.read_csv('data/.csv', encoding="ISO-8859-1", skiprows=5, names=header_list, low_memory=False)
 
@@ -36,56 +39,61 @@ df2 = df.resample('W', on='Datetime')
 
 
 for _, g in df2:
-    # x = plt.hist(g['V1ac Avg (V)'], density=True, histtype='bar', facecolor='b', alpha=0.5, bins=bins_list, label='Phase A')
-    # plt.hist(g['V2ac Avg (V)'], density=True, histtype='bar', facecolor='y', alpha=0.5, bins=bins_list, label='Phase B')
-    # plt.title('Voltage Averages for the week of\n' + str(_.date()) + " & " + str((_ + datetime.timedelta(days=7)).date()))
-    # plt.axvline(x=110, color='yellow')
-    # plt.axvline(x=125, color='yellow')
-    # plt.axvline(x=106, color='red')
-    # plt.axvline(x=127, color='red')
-    # plt.xlabel("Voltage Bins")
-    # plt.ylabel("Probability")
-    # plt.legend()
-    Abs_frecuency, intervals = np.histogram(g['V1ac Avg (V)'], bins = bins_list)
+    Abs_Frequency_V1, intervals = np.histogram(g['V1ac Avg (V)'], bins=bins_list)
+    Abs_Frequency_V2, intervals = np.histogram(g['V2ac Avg (V)'], bins=bins_list)
     # Create dataframe
-    df_x = pd.DataFrame(index=np.linspace(1, 91, 91), columns=['start', 'end', 'V1ac', 'Frec_abs', 'Frec_perc'])
+    df_x = pd.DataFrame(index=np.linspace(1, 91, len(bins_list)-1), columns=['start', 'end', 'Frec_abs_V1', 'Frec_perc_V1',
+                                                               'Frec_abs_V2', 'Frec_perc_V2'])
+
+
+    #print(g['V2ac Avg (V)'].quantile(0.95))
     # Assign the intervals
     df_x['start'] = intervals[:-1]
     df_x['end'] = intervals[1:]
-    # Calculate class marks
-    df_x['V1ac'] = (df_x['start'] + df_x['end']) / 2
+
+    df_x = df_x.set_index("start")
     # Assing Absolute frecuency
-    df_x['Frec_abs'] = Abs_frecuency
+    df_x['Frec_abs_V1'] = Abs_Frequency_V1
+    df_x['Frec_abs_V2'] = Abs_Frequency_V2
 
-    df_x['Frec_perc'] = df_x['Frec_abs'].div(df_x['Frec_abs'].sum()).mul(100).round(2)
+    #converst it to a percentage of the total
+    df_x['Frec_perc_V1'] = df_x['Frec_abs_V1'].div(df_x['Frec_abs_V1'].sum()).mul(100).round(2)
+    df_x['Frec_perc_V2'] = df_x['Frec_abs_V2'].div(df_x['Frec_abs_V2'].sum()).mul(100).round(2)
 
-
-
-
-    with pd.option_context('display.max_rows', None, 'display.max_columns', None):
-        print(df_x)
-
-
-
-
-    plt.hist(g['V1ac Avg (V)'], bins=bins_list, alpha=0.5, color='blue', ec='black', label='Phase A')
-    plt.hist(g['V2ac Avg (V)'], bins=bins_list, alpha=0.5, color='green', ec='black', label='Phase B')
+    plt.figure(figsize=(9, 25))
+    fig, axs = plt.subplots(1)
+    #generates the histogram
+    axs[0].hist(g['V1ac Avg (V)'], weights=np.ones(len(g['V1ac Avg (V)'])) / len(g['V1ac Avg (V)']) * 100, bins=bins_list, alpha=0.5, color='blue', ec='black', label='Phase A')
+    axs[0].hist(g['V2ac Avg (V)'], weights=np.ones(len(g['V2ac Avg (V)'])) / len(g['V2ac Avg (V)']) * 100, bins=bins_list, alpha=0.5, color='green', ec='black', label='Phase B')
     # Labels
-    plt.ylabel('Absolute Frequency', fontsize=14)
-    plt.xlabel('Voltage (V)', fontsize=14)
-    plt.xticks(fontsize=14)
-    plt.yticks(fontsize=14)
+    axs[0].set(xlabel='Percentage Frequency', ylabel='Voltage (V)')
+
+    # axs[0].ylabel('Percentage Frequency', fontsize=14)
+    # axs[0].xlabel('Voltage (V)', fontsize=14)
+    # axs[0].xticks(fontsize=14)
+    # axs[0].yticks(fontsize=14)
     # Add Title
-    plt.title('Voltage Averages for the week of\n' + str(_.date()) + " & " + str((_ + datetime.timedelta(days=7)).date()), fontsize=16);
+    fig.suptitle('Voltage Averages for the week of\n' + str(_.date()) + " & " + str((_ + datetime.timedelta(days=7)).date()), fontsize=16);
 
-    plt.axvline(x=110, color='yellow')
-    plt.axvline(x=125, color='yellow')
-    plt.axvline(x=106, color='red')
-    plt.axvline(x=127, color='red')
+    axs[0].axvline(x=110, color='yellow')
+    axs[0].axvline(x=125, color='yellow')
+    axs[0].axvline(x=106, color='red')
+    axs[0].axvline(x=127, color='red')
 
+    # plt.table(cellText=df_x.values, colLabels=df_x.columns, loc='bottom')
+    axs[0].legend()
+    #plt.subplots_adjust(left=None, bottom=.45, right=None, top=.5, wspace=.4, hspace=None)
+    axs[0].set_axis_off()
+    axs[0].table(cellText=df_x.values, colLabels=df_x.columns,  loc='bottom')
 
-    # plt.table(cellText=df_x)
-    plt.legend()
 
     plt.show()
+
+    # with pd.option_context('display.max_rows', None, 'display.max_columns', None):
+    #     print(df_x)
+    #
+    #     print(df_x['Frec_perc_V1'].sum(), df_x['Frec_perc_V2'].sum())
+    #
+    #     df_z = df_x.drop([105,106,107,108,109,110,126,125])
+    #     print(df_z['Frec_perc_V1'].sum(), df_z['Frec_perc_V2'].sum())
 
